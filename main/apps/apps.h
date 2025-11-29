@@ -17,4 +17,4 @@
 #include "app_keyboard/app_keyboard.h"
 #include "app_scales/app_scales.h"
 #include "app_radio/app_radio.h"
-#include "app_circle_app/circle_app.h"
+#include "app_kimchi/app_kimchi.h"
