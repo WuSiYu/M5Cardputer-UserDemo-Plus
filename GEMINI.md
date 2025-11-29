@@ -33,6 +33,12 @@ To build the project, run the following command from the root directory:
 idf.py build
 ```
 
+**Flash on Cardputer Device Command"
+
+```bash
+idf.py -p /dev/cu.usbmodem11301 flash
+```
+
 ## Development Conventions
 
 *   **Language:** The project is written in C++.

@@ -38,29 +38,25 @@
 #define AAC_URL_INDEXS (i == 2)
 #define CN_FONT_URL_INDEXS (i == 0 || i == 7 || i == 8 || i == 9)
 static constexpr const char* station_list[][2] = {
-    {"北京文艺广播 FM87.6" , "http://lhttp.qtfm.cn/live/333/64k.mp3"},
-    {"shadowfr69 Radio mp3-256k"  , "https://radio.shadowfr69.eu/mp3"},
-    {"shadowfr69 Radio aac-192k", "https://radio.shadowfr69.eu/aac"},
+    {"Aligre FM"         , "https://stream3.vestaradio.com/aligrefmradio"}, 
+    {"Sud Radio"         , "http://start-sud.ice.infomaniak.ch/start-sud-high.mp3"},
+    {"France Culture"    , "http://icecast.radiofrance.fr/franceculture-hifi.aac"},
+    {"Chante France"     , "http://chantefrance.ice.infomaniak.ch/chantefrance-128.mp3"},
+    {"M radio"           , "https://mfm.ice.infomaniak.ch/mfm-128.mp3"},
+    {"shadowfr69 Radio mp3-256k"  , "https://radio.shadowfr69.eu/mp3"}, // Anime, Games and Jpop music
+    // {"Japanimradio - Osaka", "http://ais-edge104-live365-dal02.cdnstream.com/a53497"}, // Anime, Jpop, Kpop
+    {"181-beatles_128k"  , "http://listen.181fm.com/181-beatles_128k.mp3"},
+    {"illstreet-128-mp3" , "http://ice1.somafm.com/illstreet-128-mp3"}, // Vintage music of tomorrow
     {"Lite Favorites"    , "http://naxos.cdnstream.com:80/1255_128"},
-    {"MundoLivre FM"     , "http://rrdns-continental.webnow.com.br/mundolivre.mp3"},
-    {"Tsubaki Web Radio" , "http://stream.tsubakianimeradio.com:9000/stream/1/"},
-    {"Japanimradio - Osaka", "http://ais-edge104-live365-dal02.cdnstream.com/a53497"},
-    {"959年代音乐怀旧好声音", "http://lhttp.qtfm.cn/live/5021381/64k.mp3"},
-    {"动听音乐台",           "http://lhttp.qtfm.cn/live/5022107/64k.mp3"},
-    {"星河音乐",            "http://lhttp.qtfm.cn/live/20210755/64k.mp3"},
-    // {"thejazzstream"     , "http://wbgo.streamguys.net/thejazzstream"},
+    // {"MundoLivre FM"     , "https://up-rcr.webnow.com.br/mundolivre.mp3"}, // Rock classics
+    {"Metal Detector"    , "http://ice4.somafm.com/metal-128-mp3"},
+    {"Rock hairband"     , "http://listen.livestreamingservice.com/181-hairband_128k.mp3"},
+    {"dronezone-128-mp3" , "http://ice1.somafm.com/dronezone-128-mp3"}, // Atmospheric, minimal beats.
+    {"Dub Step Beyond"   , "https://ice3.somafm.com/dubstep-128-mp3"},
     {"u80s"              , "http://ice6.somafm.com/u80s-128-mp3"},
     {"Awesome80s"        , "http://listen.livestreamingservice.com/181-awesome80s_128k.mp3"},
-    {"Metal Detector"    , "http://ice4.somafm.com/metal-128-mp3"},
-    {"181-beatles_128k"  , "http://listen.181fm.com/181-beatles_128k.mp3"},
-    {"Rock hairband"     , "http://listen.livestreamingservice.com/181-hairband_128k.mp3"},
-    {"Dub Step Beyond"   , "http://ice1.somafm.com/dubstep-256-mp3"},
-    {"illstreet-128-mp3" , "http://ice1.somafm.com/illstreet-128-mp3"},
-    {"bootliquor-128-mp3", "http://ice1.somafm.com/bootliquor-128-mp3"},
-    {"dronezone-128-mp3" , "http://ice1.somafm.com/dronezone-128-mp3"},
     {"Classic FM"        , "http://media-ice.musicradio.com:80/ClassicFMMP3"},
-    //{"Morcegao FM"       , "http://tunein.com/radio/Morcego-FM-s112812/"},
-    //{"Morcegao FM"       , "http://radio.morcegaofm.com.br/morcegao32/"},
+    {"bootliquor-128-mp3", "http://ice1.somafm.com/bootliquor-128-mp3"},
 };
 static constexpr const size_t stations = sizeof(station_list) / sizeof(station_list[0]);
 
