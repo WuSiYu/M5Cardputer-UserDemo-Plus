@@ -11,6 +11,14 @@ namespace MOONCAKE
 {
     namespace APPS
     {
+        struct Ingredient {
+            const char* name;
+            float amount;
+            const char* unit;
+            bool isRange;
+            float maxAmount;
+        };
+
         class AppKimchi : public APP_BASE
         {
         public:
@@ -18,8 +26,19 @@ namespace MOONCAKE
             void onResume() override;
             void onRunning() override;
             void onDestroy() override;
+
         private:
             HAL::Hal* _hal;
+            int _cabbageWeight;
+            std::string _inputBuffer;
+            Ingredient _ingredients[11];
+            int _scrollOffset;
+            bool _calculated;
+            
+            void calculate();
+            void handleInput();
+            void drawUI();
+            void reset();
         };
 
         class AppKimchi_packer : public APP_PACKER_BASE
