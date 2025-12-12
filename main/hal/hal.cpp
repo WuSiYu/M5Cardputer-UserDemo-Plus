@@ -14,6 +14,138 @@
 static std::unique_ptr<Hal> _hal_instance;
 static const std::string _tag = "HAL";
 
+#define CPU_USAGE_MONITORING_ENABLED 1
+
+#ifdef CPU_USAGE_MONITORING_ENABLED
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <esp_err.h>
+// adapted from https://github.com/espressif/esp-idf/blob/master/examples/system/freertos/real_time_stats/main/real_time_stats_example_main.c
+#define ARRAY_SIZE_OFFSET   5   //Increase this if print_real_time_stats returns ESP_ERR_INVALID_SIZE
+/**
+ * @brief   Function to print the CPU usage of tasks over a given duration.
+ *
+ * This function will measure and print the CPU usage of tasks over a specified
+ * number of ticks (i.e. real time stats). This is implemented by simply calling
+ * uxTaskGetSystemState() twice separated by a delay, then calculating the
+ * differences of task run times before and after the delay.
+ *
+ * @note    If any tasks are added or removed during the delay, the stats of
+ *          those tasks will not be printed.
+ * @note    This function should be called from a high priority task to minimize
+ *          inaccuracies with delays.
+ * @note    When running in dual core mode, each core will correspond to 50% of
+ *          the run time.
+ *
+ * @param   xTicksToWait    Period of stats measurement
+ *
+ * @return
+ *  - ESP_OK                Success
+ *  - ESP_ERR_NO_MEM        Insufficient memory to allocated internal arrays
+ *  - ESP_ERR_INVALID_SIZE  Insufficient array size for uxTaskGetSystemState. Trying increasing ARRAY_SIZE_OFFSET
+ *  - ESP_ERR_INVALID_STATE Delay duration too short
+ */
+static esp_err_t print_real_time_stats(TickType_t xTicksToWait)
+{
+    TaskStatus_t *start_array = NULL, *end_array = NULL;
+    UBaseType_t start_array_size, end_array_size;
+    configRUN_TIME_COUNTER_TYPE start_run_time, end_run_time;
+    esp_err_t ret;
+    uint32_t total_elapsed_time;
+
+    //Allocate array to store current task states
+    start_array_size = uxTaskGetNumberOfTasks() + ARRAY_SIZE_OFFSET;
+    start_array = (TaskStatus_t *)malloc(sizeof(TaskStatus_t) * start_array_size);
+    if (start_array == NULL) {
+        ret = ESP_ERR_NO_MEM;
+        goto exit;
+    }
+    //Get current task states
+    start_array_size = uxTaskGetSystemState(start_array, start_array_size, &start_run_time);
+    if (start_array_size == 0) {
+        ret = ESP_ERR_INVALID_SIZE;
+        goto exit;
+    }
+
+    vTaskDelay(xTicksToWait);
+
+    //Allocate array to store tasks states post delay
+    end_array_size = uxTaskGetNumberOfTasks() + ARRAY_SIZE_OFFSET;
+    end_array = (TaskStatus_t *)malloc(sizeof(TaskStatus_t) * end_array_size);
+    if (end_array == NULL) {
+        ret = ESP_ERR_NO_MEM;
+        goto exit;
+    }
+    //Get post delay task states
+    end_array_size = uxTaskGetSystemState(end_array, end_array_size, &end_run_time);
+    if (end_array_size == 0) {
+        ret = ESP_ERR_INVALID_SIZE;
+        goto exit;
+    }
+
+    //Calculate total_elapsed_time in units of run time stats clock period.
+    total_elapsed_time = (end_run_time - start_run_time);
+    if (total_elapsed_time == 0) {
+        ret = ESP_ERR_INVALID_STATE;
+        goto exit;
+    }
+
+    printf("\n|                 Task | Run Time | Percentage\n");
+    //Match each task in start_array to those in the end_array
+    for (int i = 0; i < start_array_size; i++) {
+        int k = -1;
+        for (int j = 0; j < end_array_size; j++) {
+            if (start_array[i].xHandle == end_array[j].xHandle) {
+                k = j;
+                //Mark that task have been matched by overwriting their handles
+                start_array[i].xHandle = NULL;
+                end_array[j].xHandle = NULL;
+                break;
+            }
+        }
+        //Check if matching task found
+        if (k >= 0) {
+            uint32_t task_elapsed_time = end_array[k].ulRunTimeCounter - start_array[i].ulRunTimeCounter;
+            uint32_t percentage_time = (task_elapsed_time * 100UL) / (total_elapsed_time * CONFIG_FREERTOS_NUMBER_OF_CORES);
+            printf("| %20s | %8"PRIu32" | %"PRIu32"%%\n", start_array[i].pcTaskName, task_elapsed_time, percentage_time);
+        }
+    }
+
+    //Print unmatched tasks
+    for (int i = 0; i < start_array_size; i++) {
+        if (start_array[i].xHandle != NULL) {
+            printf("| %20s | Deleted\n", start_array[i].pcTaskName);
+        }
+    }
+    for (int i = 0; i < end_array_size; i++) {
+        if (end_array[i].xHandle != NULL) {
+            printf("| %20s | Created\n", end_array[i].pcTaskName);
+        }
+    }
+    ret = ESP_OK;
+
+exit:    //Common return path
+    free(start_array);
+    free(end_array);
+    return ret;
+}
+
+static void system_monitor_task(void *pvParameters)
+{
+    while (1) {
+        if (auto ret = print_real_time_stats(pdMS_TO_TICKS(1000)); ret != ESP_OK) {
+            mclog::tagError("system_monitor", "print_real_time_stats failed: {}", esp_err_to_name(ret));
+        }
+        vTaskDelay(pdMS_TO_TICKS(10000));
+    }
+}
+
+void Hal::startSystemMonitorTask()
+{
+    xTaskCreatePinnedToCore(system_monitor_task, "system_monitor", 4096, NULL, 1, NULL, APP_CPU_NUM);
+}
+#endif // CPU_USAGE_MONITORING_ENABLED
+
 Hal& GetHAL()
 {
     if (!_hal_instance) {
@@ -36,6 +168,10 @@ void Hal::init()
     keyboard_init();
     setting_init();
     spi_init();
+
+#if CPU_USAGE_MONITORING_ENABLED
+    startSystemMonitorTask();
+#endif
 }
 
 void Hal::update()
@@ -155,59 +291,118 @@ void Hal::keyboard_init()
 #include <sys/time.h>
 #include <esp_sntp.h>
 
-#define DEFAULT_SCAN_LIST_SIZE 6
-static wifi_ap_record_t _ap_info[DEFAULT_SCAN_LIST_SIZE];
-
 void Hal::wifiScan(std::vector<ScanResult_t>& scanResult)
 {
-    mclog::tagInfo(_tag, "wifi scan");
+    // Keep blocking API for compatibility, but use the async path internally
+    mclog::tagInfo(_tag, "wifi scan (compat, blocking)");
+    wifiScanStartAsync();
+    while (!_is_wifi_scan_done) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    wifiScanCollect(scanResult);
+}
+
+bool Hal::wifiScanStartAsync()
+{
+    mclog::tagInfo(_tag, "wifi scan start async");
+
+    if (!_is_wifi_inited) {
+        mclog::tagError(_tag, "wifi not inited");
+        return false;
+    }
+
+    if (_is_wifi_scan_in_progress) {
+        mclog::tagWarn(_tag, "wifi scan already in progress");
+        return false;
+    }
+
+    _is_wifi_scan_in_progress = true;
+    _is_wifi_scan_done        = false;
+
+    wifi_scan_config_t config = {};
+    config.ssid               = nullptr;
+    config.bssid              = nullptr;
+    config.channel            = 0;
+    config.show_hidden        = false;
+    config.scan_type          = WIFI_SCAN_TYPE_ACTIVE;
+
+    esp_err_t ret = esp_wifi_scan_start(&config, false);  // non-blocking
+    if (ret != ESP_OK) {
+        mclog::tagError(_tag, "failed to start wifi scan async: {}", esp_err_to_name(ret));
+        _is_wifi_scan_in_progress = false;
+        return false;
+    }
+    return true;
+}
+
+bool Hal::wifiScanCollect(std::vector<ScanResult_t>& scanResult)
+{
+    if (!_is_wifi_scan_done) {
+        return false;
+    }
+
+    mclog::tagInfo(_tag, "wifi scan collect");
 
     scanResult.clear();
 
-    uint16_t number   = DEFAULT_SCAN_LIST_SIZE;
     uint16_t ap_count = 0;
-    memset(_ap_info, 0, sizeof(_ap_info));
-
-    // Start WiFi scan
-    esp_err_t ret = esp_wifi_scan_start(NULL, true);
-    if (ret != ESP_OK) {
-        mclog::tagError(_tag, "failed to start wifi scan: {}", esp_err_to_name(ret));
-        return;
-    }
-
-    ret = esp_wifi_scan_get_ap_num(&ap_count);
+    esp_err_t ret = esp_wifi_scan_get_ap_num(&ap_count);
     if (ret != ESP_OK) {
         mclog::tagError(_tag, "failed to get AP number: {}", esp_err_to_name(ret));
-        return;
+        _is_wifi_scan_in_progress = false;
+        _is_wifi_scan_done        = false;
+        return false;
     }
 
-    ret = esp_wifi_scan_get_ap_records(&number, _ap_info);
+    if (ap_count == 0) {
+        mclog::tagInfo(_tag, "no AP found");
+        _is_wifi_scan_in_progress = false;
+        _is_wifi_scan_done        = false;
+        return true;
+    }
+
+    // 动态分配内存
+    wifi_ap_record_t* ap_info = new (std::nothrow) wifi_ap_record_t[ap_count];
+    if (!ap_info) {
+        mclog::tagError(_tag, "failed to allocate memory for AP records");
+        _is_wifi_scan_in_progress = false;
+        _is_wifi_scan_done        = false;
+        return false;
+    }
+
+    uint16_t number = ap_count;
+    ret = esp_wifi_scan_get_ap_records(&number, ap_info);
     if (ret != ESP_OK) {
         mclog::tagError(_tag, "failed to get AP records: {}", esp_err_to_name(ret));
-        return;
+        delete[] ap_info;
+        _is_wifi_scan_in_progress = false;
+        _is_wifi_scan_done        = false;
+        return false;
     }
 
-    // Process scan results
     for (int i = 0; i < number; i++) {
-        std::string ssid = (char*)_ap_info[i].ssid;
-        int rssi         = _ap_info[i].rssi;
+        std::string ssid = (char*)ap_info[i].ssid;
+        int rssi         = ap_info[i].rssi;
+        uint8_t channel  = ap_info[i].primary;
 
-        // Skip empty SSID
         if (ssid.empty()) {
             continue;
         }
 
-        // Add to ap_list
-        scanResult.push_back(std::make_pair(rssi, ssid));
+        scanResult.push_back({rssi, channel, ssid});
     }
 
-    // Sort ap_list by RSSI (from strongest to weakest)
+    // 释放内存
+    delete[] ap_info;
+
     std::sort(scanResult.begin(), scanResult.end(),
-              [](const std::pair<int, std::string>& a, const std::pair<int, std::string>& b) {
-                  return a.first > b.first;  // Higher RSSI first
+              [](const ScanResult_t& a, const ScanResult_t& b) {
+                  return a.rssi > b.rssi;
               });
 
-    mclog::tagInfo(_tag, "wifi scan completed, found {} APs", scanResult.size());
+    _is_wifi_scan_in_progress = false;
+    _is_wifi_scan_done        = false;
+    return true;
 }
 
 static EventGroupHandle_t s_wifi_event_group = NULL;
@@ -236,6 +431,20 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
         ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+
+        // Set connected flag and start SNTP
+        if (_hal_instance) {
+            if (_hal_instance->_is_wifi_background_pending) {
+                _hal_instance->_is_wifi_background_connected = true;
+            }
+        }
+    }
+
+    // Scan done
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_SCAN_DONE) {
+        if (_hal_instance) {
+            _hal_instance->on_wifi_scan_done();
+        }
     }
 }
 
@@ -283,8 +492,50 @@ void Hal::wifiDeinit()
     _is_wifi_inited = false;
 }
 
+void Hal::wifiConnectBackground(const std::string& ssid, const std::string& password)
+{
+    mclog::tagInfo(_tag, "wifi connect (background) to ssid: {} password: {}", ssid, password);
+
+    if (!_is_wifi_inited) {
+        wifiInit();
+    }
+
+    wifiDisconnect();
+
+    // Hold until wifi started
+    xEventGroupWaitBits(s_wifi_event_group, WIFI_STARTED_BIT, pdFALSE, pdFALSE, pdMS_TO_TICKS(3000));
+
+    // Reset event status
+    xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT | WIFI_DISCONNECTED_BIT);
+
+    // Set Wi-Fi config
+    wifi_config_t wifi_config = {};
+    strncpy((char*)wifi_config.sta.ssid, ssid.c_str(), sizeof(wifi_config.sta.ssid));
+    strncpy((char*)wifi_config.sta.password, password.c_str(), sizeof(wifi_config.sta.password));
+
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_connect());
+    _is_wifi_background_pending = true;
+    _is_wifi_background_connected  = false;
+}
+
+bool Hal::wifiConnectBackgroundCheck() {
+    if (_is_wifi_background_pending && _is_wifi_background_connected) {
+        _is_wifi_background_pending = false;
+        mclog::tagInfo(_tag, "wifi background connect succeeded");
+        _is_wifi_connected = true;
+        start_sntp();
+        return true;
+    }
+    return false;
+}
+
 bool Hal::wifiConnect(const std::string& ssid, const std::string& password)
 {
+    // reset background connect flags
+    _is_wifi_background_pending = false;
+    _is_wifi_background_connected  = false;
+
     mclog::tagInfo(_tag, "wifi connect to ssid: {} password: {}", ssid, password);
 
     if (!_is_wifi_inited) {
@@ -382,6 +633,13 @@ void Hal::stop_sntp()
     }
 
     esp_sntp_stop();
+}
+
+void Hal::on_wifi_scan_done()
+{
+    // mclog::tagInfo(_tag, "wifi scan done event");
+    _is_wifi_scan_in_progress = false;
+    _is_wifi_scan_done = true;
 }
 
 /* -------------------------------------------------------------------------- */

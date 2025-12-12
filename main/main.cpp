@@ -29,12 +29,13 @@ extern "C" void app_main(void)
     // Install apps
     GetMooncake().installApp(std::make_unique<Launcher>());
     GetMooncake().installApp(std::make_unique<AppWifiScan>());
+    GetMooncake().installApp(std::make_unique<AppClock>());
+    GetMooncake().installApp(std::make_unique<AppRadio>());
     GetMooncake().installApp(std::make_unique<AppRecord>());
     GetMooncake().installApp(std::make_unique<AppChat>());
     GetMooncake().installApp(std::make_unique<AppRemote>());
     GetMooncake().installApp(std::make_unique<AppREPL>());
     GetMooncake().installApp(std::make_unique<AppSetWiFi>());
-    GetMooncake().installApp(std::make_unique<AppClock>());
     GetMooncake().installApp(std::make_unique<AppKeyboard>());
     GetMooncake().installApp(std::make_unique<AppImu>());
     GetMooncake().installApp(std::make_unique<AppSdcard>());

@@ -41,6 +41,7 @@ private:
         // 1 ~ 4
         uint8_t bat_state     = 1;
         std::string bat_level = "100%";
+        std::string bat_voltage = "4.20V";
         std::string time      = "12:34";
     };
 

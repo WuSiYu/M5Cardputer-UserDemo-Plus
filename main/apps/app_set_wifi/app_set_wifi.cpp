@@ -25,6 +25,20 @@ AppSetWiFi::~AppSetWiFi()
     delete static_cast<AppIcon_t*>(getAppInfo().userData);
 }
 
+void AppSetWiFi::onCreate()
+{
+    mclog::tagInfo(getAppInfo().name, "on create");
+
+    load_saved_wifi_settings();
+    if (!_wifi_ssid.empty() && !_wifi_password.empty()) {
+        mclog::tagInfo(getAppInfo().name, "found saved wifi settings, attempting auto connect");
+        _current_state = STATE_CONNECTING;
+        render_interface();
+        GetHAL().wifiConnectBackground(_wifi_ssid, _wifi_password);
+        mclog::tagInfo(getAppInfo().name, "auto connect initiated");
+    }
+}
+
 void AppSetWiFi::onOpen()
 {
     mclog::tagInfo(getAppInfo().name, "on open");

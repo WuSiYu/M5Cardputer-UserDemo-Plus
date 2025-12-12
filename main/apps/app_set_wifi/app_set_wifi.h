@@ -18,6 +18,7 @@ public:
     AppSetWiFi();
     ~AppSetWiFi();
 
+    void onCreate() override;
     void onOpen() override;
     void onRunning() override;
     void onClose() override;

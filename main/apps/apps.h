@@ -20,3 +20,4 @@
 #include "app_sdcard/app_sdcard.h"
 #include "app_lora_chat/app_lora_chat.h"
 #include "app_gps/app_gps.h"
+#include "app_radio/app_radio.h"

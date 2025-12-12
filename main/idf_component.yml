@@ -17,3 +17,4 @@ dependencies:
   espressif/esp-now: ^2.5.2
   espressif/esp_tinyusb: ^1.1
   jgromes/radiolib: ^7.2.1
+  espressif/arduino-esp32: ^3.0.0

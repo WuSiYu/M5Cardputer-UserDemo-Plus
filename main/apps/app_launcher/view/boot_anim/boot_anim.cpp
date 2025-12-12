@@ -67,6 +67,7 @@ void Launcher::boot_anim()
     GetHAL().speaker.setVolume(255);
     GetHAL().speaker.playWav(boot_sfx, sizeof(boot_sfx));
 #endif
+    GetHAL().speaker.setVolume(90);
 
     // Wait enter
     int egg_count = 0;

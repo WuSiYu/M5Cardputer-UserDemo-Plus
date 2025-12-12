@@ -79,6 +79,22 @@ void LauncherMenu::onReadInput()
         else if (event.row == 2 && event.col == 13) {
             press(getSelectedKeyframe());
         }
+        // -/= for brightness adjust
+        else if (event.row == 0 && (event.col == 11 || event.col == 12)) {
+            int brightness = GetHAL().display.getBrightness();
+            if (event.col == 11) {
+                brightness -= 48;
+                if (brightness < 15) {
+                    brightness = 15;
+                }
+            } else {
+                brightness += 48;
+                if (brightness > 255) {
+                    brightness = 255;
+                }
+            }
+            GetHAL().display.setBrightness(brightness);
+        }
     }
     // Key released
     else {

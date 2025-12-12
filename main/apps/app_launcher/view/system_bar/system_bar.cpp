@@ -25,6 +25,17 @@ void Launcher::start_system_bar()
 
 void Launcher::update_system_bar()
 {
+    // Skip system bar rendering for certain apps
+    if (_data.running_app_id >= 0) {
+        auto running_app = mooncake::GetMooncake().getAppAbilityManager()->getAbilityInstance(_data.running_app_id);
+        if (running_app) {
+            auto app_name = static_cast<AppAbility*>(running_app)->getAppInfo().name;
+            if (app_name == "Radio") {
+                return;
+            }
+        }
+    }
+
     if ((GetHAL().millis() - _data.system_bar_update_count) > _data.system_bar_update_preiod) {
         render_system_bar();
         _data.system_bar_update_count = GetHAL().millis();
@@ -34,6 +45,7 @@ void Launcher::update_system_bar()
 void Launcher::render_system_bar()
 {
     // Update state
+    GetHAL().wifiConnectBackgroundCheck();
     _data.system_state.wifi_state = GetHAL().isWifiConnected() ? 1 : 4;
 
     // Time
@@ -47,14 +59,16 @@ void Launcher::render_system_bar()
     if ((GetHAL().millis() - _data.bat_update_time_count) > 5000 || _data.bat_update_time_count == 0) {
         auto bat_level               = GetHAL().getBatLevel();
         _data.system_state.bat_level = fmt::format("{}", bat_level);
+        auto bat_voltage             = GetHAL().getBatVoltage();
+        _data.system_state.bat_voltage = fmt::format("{:.2f}V", bat_voltage / 1000.0f);
         // mclog::tagInfo("system_bar", "get bat level: {}", bat_level);
         // printf("b:%d\n", bat_level);
 
-        if (bat_level >= 100) {
+        if (bat_level >= 75) {
             _data.system_state.bat_state = 1;
-        } else if (bat_level >= 75) {
-            _data.system_state.bat_state = 2;
         } else if (bat_level >= 50) {
+            _data.system_state.bat_state = 2;
+        } else if (bat_level >= 25) {
             _data.system_state.bat_state = 3;
         } else {
             _data.system_state.bat_state = 4;
@@ -70,15 +84,15 @@ void Launcher::render_system_bar()
     GetHAL().canvasSystemBar.fillScreen(THEME_COLOR_BG);
     GetHAL().canvasSystemBar.fillSmoothRoundRect(margin_x, margin_y, GetHAL().canvasSystemBar.width() - margin_x * 2,
                                                  GetHAL().canvasSystemBar.height() - margin_y * 2,
-                                                 (GetHAL().canvasSystemBar.height() - margin_y * 2) / 2,
+                                                 7,
                                                  THEME_COLOR_SYSTEM_BAR);
 
     GetHAL().canvasSystemBar.setFont(FONT_BASIC);
 
     // Time
     GetHAL().canvasSystemBar.setTextColor(THEME_COLOR_SYSTEM_BAR_TEXT);
-    GetHAL().canvasSystemBar.drawCenterString(_data.system_state.time.c_str(), GetHAL().canvasSystemBar.width() / 2,
-                                              GetHAL().canvasSystemBar.height() / 2 - FONT_HEIGHT / 2);
+    GetHAL().canvasSystemBar.drawCenterString(_data.system_state.time.c_str(), 54,
+                                              GetHAL().canvasSystemBar.height() / 2 - FONT_HEIGHT / 2 - 1);
 
     // Wifi
     int x = 15;
@@ -95,6 +109,23 @@ void Launcher::render_system_bar()
     } else if (_data.system_state.wifi_state == 5) {
         GetHAL().canvasSystemBar.pushImage(x, y, 16, 16, image_data_wifi5);
     }
+
+    // Free Mem
+    GetHAL().canvasSystemBar.setTextColor(TFT_DARKGRAY);
+    GetHAL().canvasSystemBar.drawRightString(
+        std::to_string(esp_get_free_heap_size() / 1000).append("k").c_str(),
+        GetHAL().canvasSystemBar.width() - 50,
+        GetHAL().canvasSystemBar.height() / 2 - 3 + 4,
+        FONT_SMALL
+    );
+
+    // Bat votage
+    GetHAL().canvasSystemBar.drawRightString(
+        _data.system_state.bat_voltage.c_str(),
+        GetHAL().canvasSystemBar.width() - 50,
+        GetHAL().canvasSystemBar.height() / 2 - 3 - 4,
+        FONT_SMALL
+    );
 
     // Bat icon
     x = GetHAL().canvasSystemBar.width() - 45;

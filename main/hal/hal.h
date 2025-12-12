@@ -18,6 +18,7 @@ class Hal {
 public:
     void init();
     void update();
+    void startSystemMonitorTask();
 
     /* --------------------------------- System --------------------------------- */
     void delay(std::uint32_t ms)
@@ -65,17 +66,35 @@ public:
         return M5.Power.getBatteryLevel();
     }
 
+    inline int16_t getBatVoltage()
+    {
+        return M5.Power.getBatteryVoltage();
+    }
+
     /* ---------------------------------- WiFi ---------------------------------- */
-    using ScanResult_t = std::pair<int, std::string>;
+    struct ScanResult_t {
+        int rssi         = 0;
+        uint8_t channel  = 0;
+        std::string ssid = "";
+    };
     void wifiInit();
     void wifiDeinit();
     void wifiScan(std::vector<ScanResult_t>& scanResult);
+    bool wifiScanStartAsync();
+    bool wifiScanCollect(std::vector<ScanResult_t>& scanResult);
+    bool isWifiScanInProgress() const
+    {
+        return _is_wifi_scan_in_progress;
+    }
+    void on_wifi_scan_done();
+    void wifiConnectBackground(const std::string& ssid, const std::string& password);
     bool wifiConnect(const std::string& ssid, const std::string& password);
     bool isWifiConnected() const
     {
         return _is_wifi_connected;
     }
     void wifiDisconnect();
+    bool wifiConnectBackgroundCheck();
 
     /* --------------------------------- EspNow --------------------------------- */
     void espNowInit();
@@ -124,10 +143,14 @@ public:
     /* ----------------------------------- Cap ---------------------------------- */
     CapLoRa868 capLora868;
 
+    bool _is_wifi_background_pending = false;
+    bool _is_wifi_background_connected = false;
 private:
     Settings* _settings             = nullptr;
     bool _is_wifi_inited            = false;
     bool _is_wifi_connected         = false;
+    bool _is_wifi_scan_in_progress  = false;
+    bool _is_wifi_scan_done         = false;
     bool _is_esp_now_inited         = false;
     bool _is_ir_inited              = false;
     bool _is_ble_keyboard_inited    = false;

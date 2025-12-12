@@ -82,13 +82,21 @@ void DrawTriangle(Vector2 v1, Vector2 v2, Vector2 v3, uint32_t color)
     GetHAL().canvas.fillTriangle(v1.x, v1.y, v2.x, v2.y, v3.x, v3.y, color);
 }
 
-#include <random>
-std::random_device rd;
-std::mt19937 gen(rd());
+// #include <random>
+// std::random_device rd;
+// std::mt19937 gen(rd());
+// int GetRandomValue(int min, int max)
+// {
+//     std::uniform_int_distribution<> dist(min, max);
+//     return dist(gen);
+// }
+
 int GetRandomValue(int min, int max)
 {
-    std::uniform_int_distribution<> dist(min, max);
-    return dist(gen);
+    // Simple random implementation to save DIRAM
+    int rnd = static_cast<int>(GetHAL().millis() % 0xFFFFFFFF);
+    rnd = (rnd * 1103515245 + 12345) & 0x7FFFFFFF;
+    return min + (rnd % (max - min + 1));
 }
 
 // Check collision between two circles

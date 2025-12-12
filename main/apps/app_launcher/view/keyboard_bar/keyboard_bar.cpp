@@ -23,12 +23,12 @@ void Launcher::render_keyboard_bar()
 {
     // Backgound
     int margin_x = 4;
-    int margin_y = 6;
+    int margin_y = 2;
 
     GetHAL().canvasKeyboardBar.fillScreen(THEME_COLOR_BG);
     GetHAL().canvasKeyboardBar.fillSmoothRoundRect(
         margin_x, margin_y, GetHAL().canvasKeyboardBar.width() - margin_x * 2,
-        GetHAL().canvasKeyboardBar.height() - margin_y * 2, (GetHAL().canvasKeyboardBar.height() - margin_y * 2) / 2,
+        GetHAL().canvasKeyboardBar.height() - margin_y * 2, 7,
         THEME_COLOR_KB_BAR);
 
     // render state

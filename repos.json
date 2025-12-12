@@ -23,5 +23,10 @@
         "url": "https://github.com/Forairaaaaa/smooth_ui_toolkit.git",
         "path": "components/smooth_ui_toolkit",
         "branch": "v2.4.0"
+    },
+    {
+        "url": "https://github.com/WuSiYu/ESP8266Audio.git",
+        "path": "components/ESP8266Audio",
+        "branch": "new"
     }
 ]

@@ -1,12 +1,12 @@
 /**
  * @file theme_define.h
  * @author Forairaaaaa
- * @brief 
+ * @brief
  * @version 0.6
  * @date 2023-09-20
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #pragma once
 
@@ -24,6 +24,7 @@
 #define ICON_SELECTED_WIDTH                 64
 #define FONT_BASIC                          &fonts::efontCN_16
 #define FONT_HEIGHT                         16
+#define FONT_SMALL                          &fonts::Font0
 
 #define THEME_COLOR_KB_CAPS_LOCK            TFT_SKYBLUE
 #define THEME_COLOR_KB_ALT                  TFT_YELLOW
