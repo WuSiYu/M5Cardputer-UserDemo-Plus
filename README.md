@@ -1,3 +1,7 @@
+**2025/12**: I recently brought an Adv device, so I migrated my "enhanced work" (and some more) from last year based on the latest official Adv firmware, please visit the new [CardputerADV branch](https://github.com/WuSiYu/M5Cardputer-UserDemo-Plus/tree/CardputerADV), this branch is deprecated.
+<br/><br/><br/><br/><br/><br/><br/><br/><br/>
+
+
 # M5Cardputer-UserDemo-Plus
 Official firmware enhanced
  
