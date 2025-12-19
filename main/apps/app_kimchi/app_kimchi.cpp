@@ -40,11 +40,10 @@ void AppKimchi::onResume()
 
 void AppKimchi::onRunning()
 {
-    if (_data.current_state == state_init) {
-        // Initial draw and setup
-        drawUI();
+    if (_data.current_state == state_init)
+    {
+        // Initial setup
         _data.current_state = state_running;
-        return;
     }
 
     // Handle home button to exit
@@ -57,6 +56,9 @@ void AppKimchi::onRunning()
 
     // Handle keyboard input
     handleInput();
+
+    // Redraw UI in every loop for blinking cursor
+    drawUI();
 
     // Small delay to prevent excessive updates
     delay(50);
@@ -92,71 +94,89 @@ void AppKimchi::calculate()
 
 void AppKimchi::handleInput()
 {
-    // Get keyboard object
     auto keyboard = _data.hal->keyboard();
-
-    // Check if any key is pressed
-    if (keyboard->isPressed())
+    if (!keyboard->isPressed())
     {
-        keyboard->updateKeysState();
+        return;
+    }
+    keyboard->updateKeysState();
 
-        if (keyboard->keysState().enter)
+    if (keyboard->keysState().enter)
+    {
+        if (!_data.calculated && _data.inputBuffer.length() > 0)
         {
-            if (_data.inputBuffer.length() > 0)
+            _data.cabbageWeight = std::stoi(_data.inputBuffer);
+            calculate();
+            _data.hal->playNextSound();
+        }
+        return;
+    }
+
+    if (keyboard->keysState().del)
+    {
+        if (!_data.calculated && _data.inputBuffer.length() > 0)
+        {
+            _data.inputBuffer.pop_back();
+        }
+        return;
+    }
+
+    for (auto &key : keyboard->keysState().values)
+    {
+        if (key >= '0' && key <= '9')
+        {
+            if (!_data.calculated && _data.inputBuffer.length() < 4)
             {
-                _data.cabbageWeight = std::stoi(_data.inputBuffer);
-                calculate();
-                _data.hal->playNextSound();
-                drawUI(); // Redraw after calculation
+                _data.inputBuffer += key;
             }
         }
-        else if (keyboard->keysState().del)
+        else if (key == 'r' || key == 'R')
         {
-            if (_data.inputBuffer.length() > 0)
+            reset();
+            _data.hal->playNextSound();
+        }
+        else if (key == 'c' || key == 'C')
+        {
+            if (_data.calculated)
             {
-                _data.inputBuffer.pop_back();
-                drawUI(); // Redraw after deletion
+                _data.calculated = false;
+                _data.scrollOffset = 0;
+            }
+            else
+            {
+                _data.inputBuffer.clear();
             }
         }
-        else
-        {
-            for (auto& key : keyboard->keysState().values)
+        else if (key == ';' || key == 0x1B)
+        { // Up
+            if (_data.calculated)
             {
-                if (key >= '0' && key <= '9')
+                if (_data.scrollOffset > 0)
                 {
-                    if (_data.inputBuffer.length() < 4)
-                    { // Max 4 digits (9999g)
-                        _data.inputBuffer += key;
-                        drawUI(); // Redraw after adding digit
-                    }
+                    _data.scrollOffset--;
                 }
-                else if (key == 'r' || key == 'R')
+            }
+            else
+            {
+                int weight = _data.inputBuffer.empty() ? 0 : std::stoi(_data.inputBuffer);
+                weight = std::min(9999, weight + 100);
+                _data.inputBuffer = std::to_string(weight);
+            }
+        }
+        else if (key == '.' || key == 0x1F)
+        { // Down
+            if (_data.calculated)
+            {
+                if (_data.scrollOffset < 5)
                 {
-                    reset();
-                    _data.hal->playNextSound();
-                    drawUI(); // Redraw after reset
+                    _data.scrollOffset++;
                 }
-                else if (key == 'c' || key == 'C')
-                {
-                    _data.inputBuffer.clear();
-                    drawUI(); // Redraw after clearing
-                }
-                else if (key == ';' || key == 0x1B)
-                { // Up arrow
-                    if (_data.scrollOffset > 0)
-                    {
-                        _data.scrollOffset--;
-                        drawUI(); // Redraw after scrolling
-                    }
-                }
-                else if (key == '.' || key == 0x1F)
-                { // Down arrow
-                    if (_data.scrollOffset < 5)
-                    { // Max scroll (11 items - 6 visible)
-                        _data.scrollOffset++;
-                        drawUI(); // Redraw after scrolling
-                    }
-                }
+            }
+            else
+            {
+                int weight = _data.inputBuffer.empty() ? 0 : std::stoi(_data.inputBuffer);
+                weight = std::max(0, weight - 100);
+                _data.inputBuffer = std::to_string(weight);
             }
         }
     }
@@ -165,57 +185,78 @@ void AppKimchi::handleInput()
 void AppKimchi::drawUI()
 {
     _data.hal->canvas()->fillScreen(THEME_COLOR_BG);
-
     _data.hal->canvas()->setCursor(4, 2);
-    // _data.hal->canvas()->setCursor(10, 5);
     _data.hal->canvas()->setTextSize(1);
 
-    _data.hal->canvas()->printf("KIMCHI CALCULATOR\n");
+    _data.hal->canvas()->printf("KIMCHI CALCULATOR\n\n");
 
-    // Ingredients list (scrollable, show 6 at a time)
-    if (_data.calculated) {
+    // Cabbage weight input
+    _data.hal->canvas()->printf("Cabbage (g): %s", _data.inputBuffer.c_str());
+
+    // Add a "cursor"
+    if (!_data.calculated)
+    {
+        int16_t x = _data.hal->canvas()->getCursorX();
+        int16_t y = _data.hal->canvas()->getCursorY();
+        if ((millis() % 1000) < 500)
+        {
+            _data.hal->canvas()->fillRect(x + 2, y, 6, 8, THEME_COLOR_REPL_TEXT);
+        }
+    }
+    _data.hal->canvas()->printf("\n\n");
+
+    if (_data.calculated)
+    {
         int y = 62;
-        for (int i = _data.scrollOffset; i < _data.scrollOffset + 6 && i < 11; i++) {
+        for (int i = _data.scrollOffset; i < _data.scrollOffset + 6 && i < 11; i++)
+        {
 
             // Format ingredient display
             char buffer[64];
-            if (_data.ingredients[i].isRange) {
-                snprintf(buffer, sizeof(buffer), "%s: %.0f-%.0f %s",
-                    _data.ingredients[i].name,
-                    _data.ingredients[i].amount,
-                    _data.ingredients[i].maxAmount,
-                    _data.ingredients[i].unit);
-            } else {
+            if (_data.ingredients[i].isRange)
+            {
+                snprintf(buffer,
+                         sizeof(buffer),
+                         "%s: %.0f-%.0f %s",
+                         _data.ingredients[i].name,
+                         _data.ingredients[i].amount,
+                         _data.ingredients[i].maxAmount,
+                         _data.ingredients[i].unit);
+            }
+            else
+            {
                 // Show 1 decimal for pieces/heads, 0 for grams/ml
-                if (strcmp(_data.ingredients[i].unit, "pcs") == 0 ||
-                    strcmp(_data.ingredients[i].unit, "heads") == 0) {
-                    snprintf(buffer, sizeof(buffer), "%s: %.1f %s",
-                        _data.ingredients[i].name,
-                        _data.ingredients[i].amount,
-                        _data.ingredients[i].unit);
-                } else {
-                    snprintf(buffer, sizeof(buffer), "%s: %.0f %s",
-                        _data.ingredients[i].name,
-                        _data.ingredients[i].amount,
-                        _data.ingredients[i].unit);
+                if (strcmp(_data.ingredients[i].unit, "pcs") == 0 || strcmp(_data.ingredients[i].unit, "heads") == 0)
+                {
+                    snprintf(
+                        buffer, sizeof(buffer), "%s: %.1f %s", _data.ingredients[i].name, _data.ingredients[i].amount, _data.ingredients[i].unit);
+                }
+                else
+                {
+                    snprintf(
+                        buffer, sizeof(buffer), "%s: %.0f %s", _data.ingredients[i].name, _data.ingredients[i].amount, _data.ingredients[i].unit);
                 }
             }
             _data.hal->canvas()->print(buffer);
             _data.hal->canvas()->printf("\n");
-            //y += 13;
         }
 
-        // Scroll indicator with more conservative right margin
-        //if (_data.scrollOffset > 0) {
-        //    canvas->drawString("^", canvas->width() - 20, 42);
-        //}
-        //if (_data.scrollOffset < 5) {
-        //    canvas->drawString("v", canvas->width() - 20, y - 13); // Position based on last drawn line
-        //}
-    } else {
-        _data.hal->canvas()->printf("Enter cabbage weight & press ENTER\n");
+        // Add a hint to go back
+        _data.hal->canvas()->setCursor(4, 135 - 8 - 2); // Bottom
+        _data.hal->canvas()->print("Press 'C' to change weight");
     }
-    _data.hal->canvas_update(); 
+    else
+    {
+        // Help text for input mode
+        _data.hal->canvas()->setCursor(4, 62);
+        _data.hal->canvas()->printf("Up/Down: Adjust weight (+/-100g)\n");
+        _data.hal->canvas()->printf("Numbers: Set exact weight\n");
+        _data.hal->canvas()->printf("Enter: Calculate\n");
+        _data.hal->canvas()->printf("R: Reset to 2000g\n");
+        _data.hal->canvas()->printf("C: Clear input\n");
+    }
+
+    _data.hal->canvas_update();
 }
 
 void AppKimchi::reset()
@@ -223,5 +264,5 @@ void AppKimchi::reset()
     _data.cabbageWeight = 2000;
     _data.inputBuffer = "2000";
     _data.scrollOffset = 0;
-    calculate();
+    _data.calculated = false;
 }
