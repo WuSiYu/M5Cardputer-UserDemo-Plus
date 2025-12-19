@@ -198,7 +198,7 @@ void AppKimchi::drawUI()
     _data.hal->canvas()->setCursor(4, 2);
     _data.hal->canvas()->setTextSize(1);
 
-    _data.hal->canvas()->printf("KIMCHI CALCULATOR\n\n");
+    _data.hal->canvas()->printf("KIMCHI CALCULATOR\n");
 
     // Cabbage weight input
     _data.hal->canvas()->printf("Cabbage (g): %s", _data.inputBuffer.c_str());
@@ -213,7 +213,7 @@ void AppKimchi::drawUI()
             _data.hal->canvas()->fillRect(x + 2, y, 6, 8, THEME_COLOR_REPL_TEXT);
         }
     }
-    _data.hal->canvas()->printf("\n\n");
+    _data.hal->canvas()->printf("\n");
 
     if (_data.calculated)
     {
