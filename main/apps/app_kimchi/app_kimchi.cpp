@@ -14,6 +14,7 @@ void AppKimchi::onCreate()
     _data.inputBuffer = "2000";
     _data.scrollOffset = 0;
     _data.calculated = false;
+    _data.lastKeyPressTime = 0; // Initialize for debouncing
 
     // Initialize ingredients array
     for (int i = 0; i < 11; i++) {
@@ -95,11 +96,20 @@ void AppKimchi::calculate()
 void AppKimchi::handleInput()
 {
     auto keyboard = _data.hal->keyboard();
+
+    // Debounce: Only process key presses if enough time has passed
+    if (millis() - _data.lastKeyPressTime < _data.keyPressDelay) {
+        return;
+    }
+
     if (!keyboard->isPressed())
     {
         return;
     }
+    
     keyboard->updateKeysState();
+
+    _data.lastKeyPressTime = millis(); // Update last key press time after processing
 
     if (keyboard->keysState().enter)
     {

@@ -39,6 +39,8 @@ namespace MOONCAKE
                 Ingredient ingredients[11];
                 int scrollOffset;
                 bool calculated;
+                unsigned long lastKeyPressTime; // Added for debouncing
+                const unsigned long keyPressDelay = 250; // Added for debouncing
             };
             Data_t _data;
 
