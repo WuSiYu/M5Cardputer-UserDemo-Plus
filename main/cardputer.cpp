@@ -62,7 +62,7 @@ extern "C" void app_main(void)
 
         // auto test_app = new APPS::AppWifiScan_Packer;
         // auto test_app = new APPS::AppTimer_Packer;
-        auto test_app = new APPS::AppIR_Packer;
+        auto test_app = new APPS::AppWifiScan_Packer; // Use AppWifiScan as alternative test app
 
 
         mooncake.installApp(test_app);
@@ -85,7 +85,6 @@ extern "C" void app_main(void)
         // mooncake.installApp(new APPS::AppWifiScan_Packer);
         // mooncake.installApp(new APPS::AppSetWiFi_Packer);
         // mooncake.installApp(new APPS::AppIR_Packer);
-        mooncake.installApp(new APPS::AppKeyboard_Packer);
 
 
         // Create launcher
@@ -110,8 +109,6 @@ extern "C" void app_main(void)
     mooncake.installApp(new APPS::AppWifiScan_Packer);
     mooncake.installApp(new APPS::AppRadio_Packer);
     mooncake.installApp(new APPS::AppTimer_Packer);
-    mooncake.installApp(new APPS::AppIR_Packer);
-    mooncake.installApp(new APPS::AppKeyboard_Packer);
     mooncake.installApp(new APPS::AppScales_Packer);
     mooncake.installApp(new APPS::AppSetWiFi_Packer);
 
