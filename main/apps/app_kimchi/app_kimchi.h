@@ -3,6 +3,7 @@
 #include "hal/hal.h"
 #include <string>
 #include <vector>
+#include "../utils/theme/theme_define.h"
 #include "../utils/icon/icon_define.h"
 #include "assets/kimchi_big.h"
 #include "assets/kimchi_small.h"
@@ -21,6 +22,25 @@ namespace MOONCAKE
 
         class AppKimchi : public APP_BASE
         {
+        private:
+            enum State_t
+            {
+                state_init = 0,
+                state_running,
+            };
+
+            struct Data_t
+            {
+                HAL::Hal* hal = nullptr;
+                State_t current_state = state_init;
+                int cabbageWeight;
+                std::string inputBuffer;
+                Ingredient ingredients[11];
+                int scrollOffset;
+                bool calculated;
+            };
+            Data_t _data;
+
         public:
             void onCreate() override;
             void onResume() override;
@@ -28,13 +48,6 @@ namespace MOONCAKE
             void onDestroy() override;
 
         private:
-            HAL::Hal* _hal;
-            int _cabbageWeight;
-            std::string _inputBuffer;
-            Ingredient _ingredients[11];
-            int _scrollOffset;
-            bool _calculated;
-            
             void calculate();
             void handleInput();
             void drawUI();
