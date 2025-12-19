@@ -164,38 +164,18 @@ void AppKimchi::handleInput()
 
 void AppKimchi::drawUI()
 {
-    auto canvas = _data.hal->canvas();
+    _data.hal->canvas()->fillScreen(THEME_COLOR_BG);
 
-    // Clear screen - using the theme background color
-    canvas->fillScreen(THEME_COLOR_BG);
+    _data.hal->canvas()->setCursor(4, 2);
+    // _data.hal->canvas()->setCursor(10, 5);
+    _data.hal->canvas()->setTextSize(1);
 
-    // Set text properties with proper font and size
-    canvas->setTextColor(THEME_COLOR_REPL_TEXT, THEME_COLOR_BG);
-    canvas->setFont(FONT_REPL);
-    canvas->setTextSize(FONT_SIZE_REPL);
-    canvas->setCursor(0, 0); // Reset cursor to top-left to ensure no overlap
-
-    // Title - using more conservative padding to avoid system UI overlap
-    canvas->setTextSize(1);
-    canvas->drawString("KIMCHI CALCULATOR", 20, 25);
-
-    // Input field with cursor
-    canvas->drawString("Cabbage:", 20, 42);
-    std::string inputDisplay = _data.inputBuffer;
-    if (millis() % 1000 < 500) {  // Blinking cursor
-        inputDisplay += "_";
-    }
-    inputDisplay += " g";
-    canvas->drawString(inputDisplay.c_str(), 85, 42);
-
-    // Separator line with more conservative margins
-    canvas->drawLine(15, 55, canvas->width() - 15, 55, THEME_COLOR_REPL_TEXT);
+    _data.hal->canvas()->printf("KIMCHI CALCULATOR\n");
 
     // Ingredients list (scrollable, show 6 at a time)
     if (_data.calculated) {
         int y = 62;
         for (int i = _data.scrollOffset; i < _data.scrollOffset + 6 && i < 11; i++) {
-            canvas->setCursor(20, y);
 
             // Format ingredient display
             char buffer[64];
@@ -220,30 +200,22 @@ void AppKimchi::drawUI()
                         _data.ingredients[i].unit);
                 }
             }
-            canvas->print(buffer);
-            y += 13;
+            _data.hal->canvas()->print(buffer);
+            _data.hal->canvas()->printf("\n");
+            //y += 13;
         }
 
         // Scroll indicator with more conservative right margin
-        if (_data.scrollOffset > 0) {
-            canvas->drawString("^", canvas->width() - 20, 42);
-        }
-        if (_data.scrollOffset < 5) {
-            canvas->drawString("v", canvas->width() - 20, y - 13); // Position based on last drawn line
-        }
+        //if (_data.scrollOffset > 0) {
+        //    canvas->drawString("^", canvas->width() - 20, 42);
+        //}
+        //if (_data.scrollOffset < 5) {
+        //    canvas->drawString("v", canvas->width() - 20, y - 13); // Position based on last drawn line
+        //}
     } else {
-        canvas->drawString("Enter cabbage weight & press ENTER", 20, 80);
+        _data.hal->canvas()->printf("Enter cabbage weight & press ENTER\n");
     }
-
-    // Footer with instructions using drawCenterString like other apps
-    canvas->setTextColor(TFT_LIGHTGREY);
-    canvas->setFont(FONT_SMALL);
-    canvas->drawCenterString("HOME - Exit   R - Reset", canvas->width() / 2, canvas->height() - 15);
-    canvas->setTextColor(THEME_COLOR_REPL_TEXT);
-    canvas->setFont(FONT_REPL);
-
-    // Push to display
-    canvas->pushSprite(0, 0);
+    _data.hal->canvas_update(); 
 }
 
 void AppKimchi::reset()
