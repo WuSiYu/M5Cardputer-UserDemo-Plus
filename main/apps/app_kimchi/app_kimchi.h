@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "../utils/theme/theme_define.h"
+#include "../utils/anim/anim_define.h"
 #include "../utils/icon/icon_define.h"
 #include "assets/kimchi_big.h"
 #include "assets/kimchi_small.h"
